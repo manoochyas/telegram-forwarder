@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ورود — Luminiz NOC</title>
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
+  <section class="login-screen">
+    <form method="POST" action="/login" class="glass login-card" autocomplete="on">
+      <div class="login-logo">
+        <div class="logo-badge">⚡</div>
+        <h1>Luminiz Enterprise NOC</h1>
+        <p class="muted">مرکز عملیات شبکه</p>
+      </div>
+
+      <label class="field">
+        <span class="field-icon">👤</span>
+        <input name="username" type="text" placeholder="نام کاربری" autocomplete="username" required autofocus>
+      </label>
+
+      <label class="field">
+        <span class="field-icon">🔑</span>
+        <input name="password" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+      </label>
+
+      {% if error %}
+      <div class="login-error" role="alert">{{ error }}</div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-login">ورود به پنل</button>
+    </form>
+  </section>
+</body>
+</html>
