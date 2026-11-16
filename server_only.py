@@ -308,9 +308,15 @@ def panel_command_result(cmd_id):
 @app.route('/api/panel/dashboard')
 @login_required
 def panel_dashboard():
-    now = time.time()
-    for ip in [ip for ip, c in active_clients.items() if now - c['timestamp'] > 8]:
-        del active_clients[ip]
+    nnow = time.time()
+
+expired = [
+    ip for ip, client in list(active_clients.items())
+    if now - client.get("timestamp", 0) > CLIENT_TIMEOUT
+]
+
+for ip in expired:
+    active_clients.pop(ip, None)
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         counts = {r['status']: r['n'] for r in conn.execute("SELECT status, COUNT(*) n FROM purchase_requests GROUP BY status")}
