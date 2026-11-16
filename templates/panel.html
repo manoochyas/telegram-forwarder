@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luminiz NOC — پنل مدیریت</title>
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-badge">⚡</div>
+      <div>
+        <div class="logo-title">Luminiz</div>
+        <div class="logo-sub">Enterprise NOC</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="dashboard">📊 داشبورد</button>
+      <button class="nav-btn" data-view="requests">📥 درخواست‌ها</button>
+      <button class="nav-btn" data-view="clients">💻 کلاینت‌ها</button>
+      <button class="nav-btn" data-view="alarms">📜 هشدارها</button>
+      <button class="nav-btn" data-view="lockdown">🔒 قفل سیستم</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div>
+        <h1 id="page-title">داشبورد مدیریت</h1>
+        <p id="page-subtitle">پایش زنده وضعیت زیرساخت</p>
+      </div>
+      <div class="clock" id="clock">—</div>
+    </header>
+
+    <div id="view-dashboard" class="view active">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-icon">💻</div><div class="kpi-title">کلاینت آنلاین</div><div class="kpi-value" id="kpi-clients">–</div></div>
+        <div class="kpi"><div class="kpi-icon">⏳</div><div class="kpi-title">در انتظار تایید</div><div class="kpi-value" id="kpi-pending">–</div></div>
+        <div class="kpi"><div class="kpi-icon">✅</div><div class="kpi-title">تاییدشده</div><div class="kpi-value" id="kpi-approved">–</div></div>
+        <div class="kpi"><div class="kpi-icon">🚨</div><div class="kpi-title">هشدار فعال</div><div class="kpi-value" id="kpi-alarms">–</div></div>
+        <div class="kpi"><div class="kpi-icon">🔒</div><div class="kpi-title">وضعیت قفل</div><div class="kpi-value" id="kpi-locked">–</div></div>
+      </div>
+      <div class="card">
+        <h2>📋 آخرین درخواست‌ها</h2>
+        <div id="recent-requests" class="list">در حال بارگذاری…</div>
+      </div>
+    </div>
+
+    <div id="view-requests" class="view">
+      <div class="toolbar">
+        <select id="req-filter">
+          <option value="">همه</option>
+          <option value="pending">در انتظار</option>
+          <option value="approved">تاییدشده</option>
+          <option value="rejected">ردشده</option>
+        </select>
+        <span id="req-count" class="muted"></span>
+      </div>
+      <div id="req-list" class="list">در حال بارگذاری…</div>
+    </div>
+
+    <div id="view-clients" class="view">
+      <div id="client-list" class="list">در حال بارگذاری…</div>
+    </div>
+
+    <div id="view-alarms" class="view">
+      <div class="card">
+        <h2>ارسال هشدار جدید</h2>
+        <div class="form-row">
+          <label>سطح</label>
+          <select id="alarm-level">
+            <option value="info">اطلاع</option>
+            <option value="warning">هشدار</option>
+            <option value="critical" selected>بحرانی</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>واحد هدف</label>
+          <select id="alarm-dept">
+            <option value="all">همه</option>
+            <option value="مدیریت">مدیریت</option>
+            <option value="مالی">مالی</option>
+            <option value="فنی">فنی</option>
+            <option value="فروش">فروش</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>متن پیام</label>
+          <textarea id="alarm-message" rows="3"></textarea>
+        </div>
+        <button class="btn primary" onclick="sendAlarm()">🚨 ارسال هشدار</button>
+      </div>
+      <div class="card">
+        <h2>📜 تاریخچه هشدارها</h2>
+        <div id="alarm-history" class="list">در حال بارگذاری…</div>
+      </div>
+    </div>
+
+    <div id="view-lockdown" class="view">
+      <div class="card center">
+        <h2>🔒 قفل سراسری سیستم</h2>
+        <p id="lock-state" class="muted">—</p>
+        <button id="lock-btn" class="btn danger" onclick="toggleLock()">تغییر وضعیت</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal for command -->
+  <div id="cmd-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="cmd-title">اجرای دستور</h2>
+      <textarea id="cmd-input" rows="5" placeholder="دستور PowerShell..."></textarea>
+      <div class="modal-actions">
+        <button class="btn primary" onclick="runCommand()">🚀 اجرا</button>
+        <button class="btn ghost" onclick="closeCmd()">بستن</button>
+      </div>
+      <pre id="cmd-output" class="output">(خروجی اینجا نمایش داده می‌شود)</pre>
+    </div>
+  </div>
+
+  <script src="/static/panel.js"></script>
+</body>
+</html>
