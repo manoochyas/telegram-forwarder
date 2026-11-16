@@ -602,7 +602,7 @@ def run_telegram_bot():
         application.add_handler(CommandHandler("lock", tg_lock))
         application.add_handler(CommandHandler("requests", tg_requests))
         print("[✓] ربات تلگرام شروع شد")
-        application.run_polling()
+        application.run_polling(stop_signals=None)
     except Exception as e:
         print(f"[!] خطا در ربات تلگرام: {e}")
 
