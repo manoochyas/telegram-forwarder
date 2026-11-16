@@ -3,121 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Luminiz NOC — پنل مدیریت</title>
+  <title>Luminiz Enterprise NOC</title>
   <link rel="stylesheet" href="/static/panel.css">
 </head>
 <body>
-  <aside class="sidebar">
-    <div class="logo">
-      <div class="logo-badge">⚡</div>
-      <div>
-        <div class="logo-title">Luminiz</div>
-        <div class="logo-sub">Enterprise NOC</div>
-      </div>
-    </div>
-    <nav>
-      <button class="nav-btn active" data-view="dashboard">📊 داشبورد</button>
-      <button class="nav-btn" data-view="requests">📥 درخواست‌ها</button>
-      <button class="nav-btn" data-view="clients">💻 کلاینت‌ها</button>
-      <button class="nav-btn" data-view="alarms">📜 هشدارها</button>
-      <button class="nav-btn" data-view="lockdown">🔒 قفل سیستم</button>
-    </nav>
-  </aside>
+  <!-- پس‌زمینه با لکه‌های نورانی برای افکت شیشه‌ای -->
+  <div class="bg-orbs" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
 
-  <main class="main">
-    <header class="header">
-      <div>
-        <h1 id="page-title">داشبورد مدیریت</h1>
-        <p id="page-subtitle">پایش زنده وضعیت زیرساخت</p>
+  <!-- ==================== صفحه لاگین ==================== -->
+  <section id="login-screen" class="login-screen">
+    <form id="login-form" class="glass login-card" autocomplete="on">
+      <div class="login-logo">
+        <div class="logo-badge">⚡</div>
+        <h1>Luminiz Enterprise NOC</h1>
+        <p class="muted">مرکز عملیات شبکه</p>
       </div>
-      <div class="clock" id="clock">—</div>
-    </header>
 
-    <div id="view-dashboard" class="view active">
-      <div class="kpi-row">
-        <div class="kpi"><div class="kpi-icon">💻</div><div class="kpi-title">کلاینت آنلاین</div><div class="kpi-value" id="kpi-clients">–</div></div>
-        <div class="kpi"><div class="kpi-icon">⏳</div><div class="kpi-title">در انتظار تایید</div><div class="kpi-value" id="kpi-pending">–</div></div>
-        <div class="kpi"><div class="kpi-icon">✅</div><div class="kpi-title">تاییدشده</div><div class="kpi-value" id="kpi-approved">–</div></div>
-        <div class="kpi"><div class="kpi-icon">🚨</div><div class="kpi-title">هشدار فعال</div><div class="kpi-value" id="kpi-alarms">–</div></div>
-        <div class="kpi"><div class="kpi-icon">🔒</div><div class="kpi-title">وضعیت قفل</div><div class="kpi-value" id="kpi-locked">–</div></div>
-      </div>
-      <div class="card">
-        <h2>📋 آخرین درخواست‌ها</h2>
-        <div id="recent-requests" class="list">در حال بارگذاری…</div>
-      </div>
-    </div>
+      <label class="field">
+        <span class="field-icon">👤</span>
+        <input id="login-user" type="text" placeholder="نام کاربری" autocomplete="username" required>
+      </label>
 
-    <div id="view-requests" class="view">
-      <div class="toolbar">
-        <select id="req-filter">
-          <option value="">همه</option>
-          <option value="pending">در انتظار</option>
-          <option value="approved">تاییدشده</option>
-          <option value="rejected">ردشده</option>
-        </select>
-        <span id="req-count" class="muted"></span>
-      </div>
-      <div id="req-list" class="list">در حال بارگذاری…</div>
-    </div>
+      <label class="field">
+        <span class="field-icon">🔑</span>
+        <input id="login-pass" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+      </label>
 
-    <div id="view-clients" class="view">
-      <div id="client-list" class="list">در حال بارگذاری…</div>
-    </div>
+      <div id="login-error" class="login-error hidden" role="alert"></div>
 
-    <div id="view-alarms" class="view">
-      <div class="card">
-        <h2>ارسال هشدار جدید</h2>
-        <div class="form-row">
-          <label>سطح</label>
-          <select id="alarm-level">
-            <option value="info">اطلاع</option>
-            <option value="warning">هشدار</option>
-            <option value="critical" selected>بحرانی</option>
-          </select>
+      <button type="submit" id="login-btn" class="btn btn-login">ورود به پنل</button>
+    </form>
+  </section>
+
+  <!-- ==================== پنل اصلی ==================== -->
+  <div id="app" class="app hidden">
+    <aside class="sidebar glass">
+      <div class="logo">
+        <div class="logo-badge small">⚡</div>
+        <div>
+          <div class="logo-title">Luminiz</div>
+          <div class="logo-sub">Enterprise NOC</div>
         </div>
-        <div class="form-row">
-          <label>واحد هدف</label>
-          <select id="alarm-dept">
-            <option value="all">همه</option>
-            <option value="مدیریت">مدیریت</option>
-            <option value="مالی">مالی</option>
-            <option value="فنی">فنی</option>
-            <option value="فروش">فروش</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label>متن پیام</label>
-          <textarea id="alarm-message" rows="3"></textarea>
-        </div>
-        <button class="btn primary" onclick="sendAlarm()">🚨 ارسال هشدار</button>
       </div>
-      <div class="card">
-        <h2>📜 تاریخچه هشدارها</h2>
-        <div id="alarm-history" class="list">در حال بارگذاری…</div>
-      </div>
-    </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="dashboard"><span>📊</span><b>داشبورد</b></button>
+        <button class="nav-btn" data-view="requests"><span>📥</span><b>درخواست‌ها</b></button>
+        <button class="nav-btn" data-view="clients"><span>💻</span><b>کلاینت‌ها</b></button>
+        <button class="nav-btn" data-view="alarms"><span>🚨</span><b>هشدارها</b></button>
+        <button class="nav-btn" data-view="lockdown"><span>🔒</span><b>قفل سیستم</b></button>
+      </nav>
+      <button id="logout-btn" class="nav-btn logout"><span>🚪</span><b>خروج</b></button>
+    </aside>
 
-    <div id="view-lockdown" class="view">
-      <div class="card center">
-        <h2>🔒 قفل سراسری سیستم</h2>
-        <p id="lock-state" class="muted">—</p>
-        <button id="lock-btn" class="btn danger" onclick="toggleLock()">تغییر وضعیت</button>
-      </div>
-    </div>
-  </main>
+    <main class="main">
+      <header class="header glass">
+        <div>
+          <h2 id="page-title">داشبورد مدیریت</h2>
+          <p id="page-subtitle" class="muted">پایش زنده وضعیت زیرساخت</p>
+        </div>
+        <div class="header-side">
+          <span class="live-dot" title="رفرش خودکار هر ۵ ثانیه"></span>
+          <div class="clock" id="clock">—</div>
+        </div>
+      </header>
 
-  <!-- Modal for command -->
-  <div id="cmd-modal" class="modal hidden">
-    <div class="modal-content">
-      <h2 id="cmd-title">اجرای دستور</h2>
-      <textarea id="cmd-input" rows="5" placeholder="دستور PowerShell..."></textarea>
+      <!-- داشبورد -->
+      <div id="view-dashboard" class="view active">
+        <div class="kpi-row">
+          <div class="kpi glass"><div class="kpi-icon">💻</div><div class="kpi-title">کلاینت آنلاین</div><div class="kpi-value" id="kpi-clients">–</div></div>
+          <div class="kpi glass"><div class="kpi-icon">⏳</div><div class="kpi-title">در انتظار تایید</div><div class="kpi-value" id="kpi-pending">–</div></div>
+          <div class="kpi glass"><div class="kpi-icon">✅</div><div class="kpi-title">تاییدشده</div><div class="kpi-value" id="kpi-approved">–</div></div>
+          <div class="kpi glass"><div class="kpi-icon">🚨</div><div class="kpi-title">هشدار فعال</div><div class="kpi-value" id="kpi-alarms">–</div></div>
+          <div class="kpi glass"><div class="kpi-icon">🔒</div><div class="kpi-title">وضعیت قفل</div><div class="kpi-value" id="kpi-locked">–</div></div>
+        </div>
+        <div class="card glass">
+          <h3>📋 آخرین درخواست‌ها</h3>
+          <div id="recent-requests" class="list"><div class="empty">در حال بارگذاری…</div></div>
+        </div>
+      </div>
+
+      <!-- درخواست‌ها -->
+      <div id="view-requests" class="view">
+        <div class="toolbar">
+          <div class="chips" id="req-filters">
+            <button class="chip active" data-status="">همه</button>
+            <button class="chip" data-status="pending">در انتظار</button>
+            <button class="chip" data-status="approved">تاییدشده</button>
+            <button class="chip" data-status="rejected">ردشده</button>
+          </div>
+          <span id="req-count" class="muted"></span>
+        </div>
+        <div id="req-list" class="grid"><div class="empty">در حال بارگذاری…</div></div>
+      </div>
+
+      <!-- کلاینت‌ها -->
+      <div id="view-clients" class="view">
+        <div id="client-list" class="grid"><div class="empty">در حال بارگذاری…</div></div>
+      </div>
+
+      <!-- هشدارها -->
+      <div id="view-alarms" class="view">
+        <div class="card glass">
+          <h3>ارسال هشدار جدید</h3>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="alarm-level">سطح</label>
+              <select id="alarm-level">
+                <option value="info">اطلاع</option>
+                <option value="warning">هشدار</option>
+                <option value="critical" selected>بحرانی</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="alarm-dept">واحد هدف</label>
+              <select id="alarm-dept">
+                <option value="all">همه</option>
+                <option value="مدیریت">مدیریت</option>
+                <option value="مالی">مالی</option>
+                <option value="فنی">فنی</option>
+                <option value="فروش">فروش</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="alarm-message">متن پیام</label>
+            <textarea id="alarm-message" rows="3" placeholder="متن هشدار…"></textarea>
+          </div>
+          <button class="btn primary" id="alarm-send">🚨 ارسال هشدار</button>
+        </div>
+        <div class="card glass">
+          <h3>📜 تاریخچه هشدارها</h3>
+          <div id="alarm-history" class="list"><div class="empty">در حال بارگذاری…</div></div>
+        </div>
+      </div>
+
+      <!-- قفل سیستم -->
+      <div id="view-lockdown" class="view">
+        <div class="card glass lock-card">
+          <div id="lock-icon" class="lock-icon">🔓</div>
+          <h3>قفل سراسری سیستم</h3>
+          <p id="lock-state" class="lock-state">—</p>
+          <button id="lock-btn" class="btn big">تغییر وضعیت</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== مودال دستور / پیام ==================== -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content glass">
+      <h3 id="modal-title">اجرای دستور</h3>
+      <p id="modal-target" class="muted"></p>
+      <textarea id="modal-input" rows="5" class="code" spellcheck="false"></textarea>
       <div class="modal-actions">
-        <button class="btn primary" onclick="runCommand()">🚀 اجرا</button>
-        <button class="btn ghost" onclick="closeCmd()">بستن</button>
+        <button class="btn primary" id="modal-run">🚀 اجرا</button>
+        <button class="btn ghost" id="modal-close">بستن</button>
       </div>
-      <pre id="cmd-output" class="output">(خروجی اینجا نمایش داده می‌شود)</pre>
+      <pre id="modal-output" class="output"></pre>
     </div>
   </div>
+
+  <!-- اعلان کوتاه (Toast) -->
+  <div id="toast" class="toast hidden"></div>
 
   <script src="/static/panel.js"></script>
 </body>
