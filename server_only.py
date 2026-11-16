@@ -1,4 +1,3 @@
-$serverCode = @'
 # server_only.py - نسخه فقط سرور برای Render (بدون tkinter)
 import sqlite3
 import requests
@@ -10,7 +9,7 @@ import os
 
 BOT_TOKEN = "8802678520:AAFkzn7sYULh76Sb_1G1I1IjP06LuNNhTjA"
 ADMIN_CHAT_ID = "5913106839"
-DB_PATH = "/tmp/printers.db"  # روی Render از /tmp استفاده می‌کنیم
+DB_PATH = "/tmp/printers.db"
 
 app = Flask(__name__)
 active_clients = {}
@@ -23,6 +22,8 @@ def init_db():
         conn.execute("CREATE TABLE IF NOT EXISTS lockdown (id INTEGER PRIMARY KEY, is_active INTEGER, message TEXT)")
         conn.execute("INSERT OR IGNORE INTO lockdown (id, is_active) VALUES (1, 0)")
         conn.execute("CREATE TABLE IF NOT EXISTS remote_commands (id INTEGER PRIMARY KEY AUTOINCREMENT, client_ip TEXT, client_hostname TEXT, command TEXT, status TEXT DEFAULT 'pending', output TEXT, created_at TEXT, executed_at TEXT)")
+
+init_db()
 
 @app.route('/status')
 def status():
@@ -163,8 +164,4 @@ def serve_update(filename):
     return send_from_directory("/tmp/updates", filename)
 
 if __name__ == "__main__":
-    init_db()
     app.run(host='0.0.0.0', port=5000, debug=False)
-'@
-Set-Content -Path "C:\TelegramForwarder\server_only.py" -Value $serverCode -Encoding UTF8
-Write-Host "[✓] server_only.py ساخته شد." -ForegroundColor Green
