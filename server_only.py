@@ -322,6 +322,204 @@ def panel_dashboard():
 def panel_index():
     return render_template("panel.html")
 
+# ==================================================
+# LUMINIZ SUPPORT CHAT API — 2026
+# ==================================================
+
+from datetime import datetime, timezone
+import uuid
+
+CLIENT_DEVICE_TOKEN = os.environ.get(
+    "CLIENT_DEVICE_TOKEN", ""
+)
+
+def chat_db():
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_chat_db():
+    with chat_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS support_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id TEXT NOT NULL,
+                client_name TEXT NOT NULL,
+                department TEXT DEFAULT '',
+                sender TEXT NOT NULL,
+                body TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chat_client
+            ON support_messages(client_id, id)
+        """)
+
+init_chat_db()
+
+def check_client_token():
+    supplied = request.headers.get("X-Device-Token", "")
+    return bool(
+        CLIENT_DEVICE_TOKEN and supplied and
+        hmac.compare_digest(
+            supplied.encode("utf-8"),
+            CLIENT_DEVICE_TOKEN.encode("utf-8")
+        )
+    )
+
+def valid_chat_id(value):
+    try:
+        uuid.UUID(str(value))
+        return True
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+def chat_now():
+    return datetime.now(timezone.utc).isoformat()
+
+# -------- Employee sends a message --------
+
+@app.route("/api/client/support/messages", methods=["POST"])
+def client_chat_send():
+    if not check_client_token():
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    client_id = str(data.get("client_id", ""))
+    name = str(data.get("name", "")).strip()[:100]
+    dept = str(data.get("department", ""))[:100]
+    body = str(data.get("body", "")).strip()
+
+    if not valid_chat_id(client_id):
+        return jsonify({"error": "invalid client id"}), 400
+
+    if not name or not 1 <= len(body) <= 2000:
+        return jsonify({"error": "invalid message"}), 400
+
+    with chat_db() as conn:
+        conn.execute("""
+            INSERT INTO support_messages
+            (client_id, client_name, department,
+             sender, body, created_at)
+            VALUES (?, ?, ?, 'client', ?, ?)
+        """, (
+            client_id, name, dept, body, chat_now()
+        ))
+
+    return jsonify({"status": "success"}), 201
+
+# -------- Employee receives messages --------
+
+@app.route("/api/client/support/messages", methods=["GET"])
+def client_chat_get():
+    if not check_client_token():
+        return jsonify({"error": "unauthorized"}), 401
+
+    client_id = request.args.get("client_id", "")
+
+    if not valid_chat_id(client_id):
+        return jsonify({"error": "invalid client id"}), 400
+
+    with chat_db() as conn:
+        rows = conn.execute("""
+            SELECT id, sender, body, created_at
+            FROM support_messages
+            WHERE client_id = ?
+            ORDER BY id DESC LIMIT 100
+        """, (client_id,)).fetchall()
+
+    return jsonify({
+        "messages": [dict(r) for r in reversed(rows)]
+    })
+
+# -------- Admin lists conversations --------
+
+@app.route("/api/panel/support/conversations")
+@login_required
+def panel_chat_list():
+    with chat_db() as conn:
+        rows = conn.execute("""
+            SELECT client_id,
+                   MAX(client_name) AS client_name,
+                   MAX(department) AS department,
+                   COUNT(*) AS message_count,
+                   MAX(created_at) AS last_message_at
+            FROM support_messages
+            GROUP BY client_id
+            ORDER BY last_message_at DESC
+            LIMIT 200
+        """).fetchall()
+
+    return jsonify([dict(r) for r in rows])
+
+# -------- Admin reads conversation --------
+
+@app.route("/api/panel/support/messages/<client_id>")
+@login_required
+def panel_chat_messages(client_id):
+    if not valid_chat_id(client_id):
+        return jsonify({"error": "invalid client id"}), 400
+
+    with chat_db() as conn:
+        rows = conn.execute("""
+            SELECT id, sender, body, created_at
+            FROM support_messages
+            WHERE client_id = ?
+            ORDER BY id DESC LIMIT 200
+        """, (client_id,)).fetchall()
+
+    return jsonify({
+        "messages": [dict(r) for r in reversed(rows)]
+    })
+
+# -------- Admin replies --------
+
+@app.route(
+    "/api/panel/support/reply/<client_id>",
+    methods=["POST"]
+)
+@login_required
+def panel_chat_reply(client_id):
+    if not valid_chat_id(client_id):
+        return jsonify({"error": "invalid client id"}), 400
+
+    data = request.get_json(silent=True) or {}
+    body = str(data.get("body", "")).strip()
+
+    if not 1 <= len(body) <= 2000:
+        return jsonify({"error": "invalid message"}), 400
+
+    with chat_db() as conn:
+        client = conn.execute("""
+            SELECT client_name, department
+            FROM support_messages
+            WHERE client_id = ?
+            ORDER BY id DESC LIMIT 1
+        """, (client_id,)).fetchone()
+
+        if not client:
+            return jsonify({"error": "not found"}), 404
+
+        conn.execute("""
+            INSERT INTO support_messages
+            (client_id, client_name, department,
+             sender, body, created_at)
+            VALUES (?, ?, ?, 'admin', ?, ?)
+        """, (
+            client_id,
+            client["client_name"],
+            client["department"],
+            body,
+            chat_now()
+        ))
+
+    return jsonify({"status": "success"}), 201
+
+# ==================================================
+# END SUPPORT CHAT API
+# ==================================================
+
 # ================= Telegram Bot =================
 async def tg_start(update, context):
     await update.message.reply_text(
@@ -410,6 +608,7 @@ def run_telegram_bot():
 
 # اجرای ربات در ترد جداگانه (بیرون از __main__ تا Gunicorn هم اجرا کند)
 threading.Thread(target=run_telegram_bot, daemon=True).start()
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=False)
