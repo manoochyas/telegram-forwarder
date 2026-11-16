@@ -1,42 +1,355 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ورود — Luminiz NOC</title>
-  <link rel="stylesheet" href="/static/panel.css">
-</head>
-<body>
-  <div class="bg-orbs" aria-hidden="true">
-    <span class="orb orb-1"></span>
-    <span class="orb orb-2"></span>
-    <span class="orb orb-3"></span>
-  </div>
 
-  <section class="login-screen">
-    <form method="POST" action="/login" class="glass login-card" autocomplete="on">
+  <title>ورود | Luminiz Enterprise NOC</title>
+
+  <meta name="theme-color" content="#080d19">
+
+  <link rel="stylesheet" href="/static/panel.css?v=20261116-2">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: Tahoma, "Segoe UI", sans-serif;
+      background: #080d19;
+      color: #f4f7ff;
+      overflow-x: hidden;
+    }
+
+    .login-background {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+
+      background:
+        radial-gradient(
+          ellipse at 10% 20%,
+          rgba(78, 103, 237, .24),
+          transparent 44%
+        ),
+        radial-gradient(
+          ellipse at 85% 80%,
+          rgba(150, 71, 219, .20),
+          transparent 45%
+        ),
+        #080d19;
+    }
+
+    .login-background::before {
+      content: "";
+      position: absolute;
+      inset: -45%;
+
+      background: conic-gradient(
+        rgba(37, 99, 235, .20),
+        rgba(6, 182, 212, .12),
+        rgba(124, 58, 237, .23),
+        rgba(236, 72, 153, .14),
+        rgba(37, 99, 235, .20)
+      );
+
+      filter: blur(90px);
+      animation: rotateLight 35s linear infinite;
+    }
+
+    @keyframes rotateLight {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .login-screen {
+      position: relative;
+      z-index: 2;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 24px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 430px;
+
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+
+      padding: 43px 36px;
+
+      background: rgba(17, 25, 45, .73);
+      border: 1px solid rgba(196, 212, 255, .17);
+      border-radius: 28px;
+
+      backdrop-filter: blur(30px) saturate(150%);
+      -webkit-backdrop-filter: blur(30px) saturate(150%);
+
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, .38),
+        inset 0 1px 0 rgba(255, 255, 255, .10);
+
+      animation: reveal .65s ease-out;
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .logo-badge {
+      display: grid;
+      place-items: center;
+
+      width: 76px;
+      height: 76px;
+
+      margin: 0 auto 20px;
+
+      border-radius: 24px;
+
+      font-size: 36px;
+
+      background: linear-gradient(
+        135deg,
+        #6196ff,
+        #745deb,
+        #9c70ee
+      );
+
+      box-shadow: 0 12px 36px rgba(82, 111, 255, .36);
+    }
+
+    .login-logo h1 {
+      margin: 0;
+      font-size: 23px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.5;
+    }
+
+    .login-logo p {
+      margin: 9px 0 0;
+      color: #9cabc9;
+      font-size: 13px;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      min-height: 57px;
+      padding: 0 17px;
+
+      background: rgba(255, 255, 255, .055);
+
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 17px;
+
+      transition:
+        border-color .2s,
+        background .2s,
+        box-shadow .2s;
+    }
+
+    .field:focus-within {
+      border-color: #729eff;
+      background: rgba(255, 255, 255, .09);
+
+      box-shadow: 0 0 0 4px rgba(101, 152, 255, .12);
+    }
+
+    .field-icon {
+      font-size: 20px;
+    }
+
+    .field input {
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+
+      background: transparent;
+      border: none;
+      outline: none;
+
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 14px;
+
+      padding: 16px 0;
+    }
+
+    .field input::placeholder {
+      color: #91a1bf;
+    }
+
+    .btn-login {
+      width: 100%;
+      min-height: 55px;
+
+      margin-top: 5px;
+
+      background: linear-gradient(
+        110deg,
+        #6499ff,
+        #587cef,
+        #9278ed
+      );
+
+      border: 1px solid rgba(255, 255, 255, .22);
+      border-radius: 17px;
+
+      color: #ffffff;
+      font: 700 15px Tahoma, sans-serif;
+
+      cursor: pointer;
+
+      box-shadow: 0 12px 30px rgba(67, 103, 233, .24);
+
+      transition:
+        transform .25s,
+        filter .25s;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.12);
+    }
+
+    .login-error {
+      padding: 12px 15px;
+      border-radius: 14px;
+
+      color: #ffb7c4;
+      background: rgba(255, 99, 125, .12);
+      border: 1px solid rgba(255, 99, 125, .32);
+
+      font-size: 12px;
+    }
+
+    .login-footer {
+      text-align: center;
+      font-size: 11px;
+      color: #7e8dab;
+      margin-top: 7px;
+    }
+
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 32px 23px;
+      }
+
+      .login-logo h1 {
+        font-size: 19px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .login-background::before,
+      .login-card {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-background" aria-hidden="true"></div>
+
+  <main class="login-screen">
+
+    <form
+      method="POST"
+      action="/login"
+      class="login-card"
+      autocomplete="on"
+    >
+
       <div class="login-logo">
+
         <div class="logo-badge">⚡</div>
+
         <h1>Luminiz Enterprise NOC</h1>
-        <p class="muted">مرکز عملیات شبکه</p>
+
+        <p>مرکز مدیریت و پایش زیرساخت سازمان</p>
+
       </div>
 
       <label class="field">
-        <span class="field-icon">👤</span>
-        <input name="username" type="text" placeholder="نام کاربری" autocomplete="username" required autofocus>
+        <span class="field-icon" aria-hidden="true">👤</span>
+
+        <input
+          type="text"
+          name="username"
+          placeholder="نام کاربری"
+          autocomplete="username"
+          aria-label="نام کاربری"
+          required
+          autofocus
+        >
       </label>
 
       <label class="field">
-        <span class="field-icon">🔑</span>
-        <input name="password" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+        <span class="field-icon" aria-hidden="true">🔑</span>
+
+        <input
+          type="password"
+          name="password"
+          placeholder="رمز عبور"
+          autocomplete="current-password"
+          aria-label="رمز عبور"
+          required
+        >
       </label>
 
       {% if error %}
-      <div class="login-error" role="alert">{{ error }}</div>
+      <div class="login-error" role="alert">
+        {{ error }}
+      </div>
       {% endif %}
 
-      <button type="submit" class="btn btn-login">ورود به پنل</button>
+      <button type="submit" class="btn-login">
+        ورود به مرکز مدیریت
+      </button>
+
+      <div class="login-footer">
+        LUMINIZ • ENTERPRISE CONTROL CENTER
+      </div>
+
     </form>
-  </section>
+
+  </main>
+
 </body>
 </html>
