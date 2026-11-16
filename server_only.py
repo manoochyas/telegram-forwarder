@@ -307,30 +307,54 @@ def panel_command_result(cmd_id):
 
 @app.route('/api/panel/dashboard')
 @login_required
+
+@app.route('/api/panel/dashboard')
+@login_required
 def panel_dashboard():
-    nnow = time.time()
+    now = time.time()
 
-expired = [
-    ip for ip, client in list(active_clients.items())
-    if now - client.get("timestamp", 0) > CLIENT_TIMEOUT
-]
+    expired = [
+        ip for ip, client in list(active_clients.items())
+        if now - client.get("timestamp", 0) > CLIENT_TIMEOUT
+    ]
 
-for ip in expired:
-    active_clients.pop(ip, None)
+    for ip in expired:
+        active_clients.pop(ip, None)
+
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
-        counts = {r['status']: r['n'] for r in conn.execute("SELECT status, COUNT(*) n FROM purchase_requests GROUP BY status")}
-        alarms = conn.execute("SELECT COUNT(*) FROM alarms WHERE status='active'").fetchone()[0]
-        recent = [dict(r) for r in conn.execute("SELECT * FROM purchase_requests ORDER BY id DESC LIMIT 8")]
-        lock = conn.execute("SELECT is_active FROM lockdown WHERE id=1").fetchone()
+
+        counts = {
+            r['status']: r['n']
+            for r in conn.execute(
+                "SELECT status, COUNT(*) n FROM purchase_requests GROUP BY status"
+            )
+        }
+
+        alarms = conn.execute(
+            "SELECT COUNT(*) FROM alarms WHERE status='active'"
+        ).fetchone()[0]
+
+        recent = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT * FROM purchase_requests ORDER BY id DESC LIMIT 8"
+            )
+        ]
+
+        lock = conn.execute(
+            "SELECT is_active FROM lockdown WHERE id=1"
+        ).fetchone()
+
     return jsonify({
         "clients": len(active_clients),
         "pending": counts.get("pending", 0),
         "approved": counts.get("approved", 0),
         "alarms": alarms,
         "locked": bool(lock[0]) if lock else False,
-        "recent": recent,
+        "recent": recent
     })
+
 
 # ================= Panel page =================
 @app.route('/')
