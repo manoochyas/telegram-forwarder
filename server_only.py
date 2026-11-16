@@ -17,6 +17,7 @@ DB_PATH = "/tmp/printers.db"
 
 app = Flask(__name__)
 active_clients = {}
+_auth_log_cache = {}
 
 # ---------------- DB ----------------
 def init_db():
@@ -38,9 +39,27 @@ def check_auth():
     auth = request.authorization
     if not auth or not PANEL_PASSWORD:
         return False
-    return hmac.compare_digest(auth.username or "", PANEL_USER) and \
-           hmac.compare_digest(auth.password or "", PANEL_PASSWORD)
-
+    ok = hmac.compare_digest(auth.username or "", PANEL_USER) and \
+         hmac.compare_digest(auth.password or "", PANEL_PASSWORD)
+    if ok:
+        now = time.time()
+        last = _auth_log_cache.get(auth.username, 0)
+        if now - last > 60:
+            _auth_log_cache[auth.username] = now
+            ip = request.headers.get("X-Forwarded-For", request.remote_addr or "—").split(",")[0].strip()
+            try:
+                requests.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": ADMIN_CHAT_ID,
+                        "text": f"🔑 <b>لاگین موفق</b>\n👤 کاربر: <code>{auth.username}</code>\n🌐 IP: <code>{ip}</code>",
+                        "parse_mode": "HTML",
+                    },
+                    timeout=5,
+                )
+            except Exception:
+                pass
+    return ok
 def protected(fn):
     @functools.wraps(fn)
     def wrapper(*a, **kw):
@@ -256,6 +275,21 @@ def panel_dashboard():
 @app.route('/')
 @protected
 def panel_index():
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "—").split(",")[0].strip()
+    ua = request.headers.get("User-Agent", "—")
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": ADMIN_CHAT_ID,
+                "text": f"👁 <b>بازدید پنل</b>\n🌐 IP: <code>{ip}</code>\n🖥 {ua[:120]}",
+                "parse_mode": "HTML",
+            },
+            timeout=5,
+        )
+    except Exception:
+        pass
+    return render_template("panel.html")
     return render_template("panel.html")
 
 if __name__ == "__main__":
