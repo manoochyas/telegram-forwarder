@@ -7,149 +7,25 @@
   <link rel="stylesheet" href="/static/panel.css">
 </head>
 <body>
-  <!-- پس‌زمینه با لکه‌های نورانی برای افکت شیشه‌ای -->
   <div class="bg-orbs" aria-hidden="true">
     <span class="orb orb-1"></span>
     <span class="orb orb-2"></span>
     <span class="orb orb-3"></span>
   </div>
 
-  <!-- ==================== صفحه لاگین ==================== -->
-  async function init() {
-    startClock();
-    bindEvents();
-    showApp();  // مستقیم برو به پنل (چون Flask چک می‌کند)
-}
-
-  <!-- ==================== پنل اصلی ==================== -->
-  <div id="app" class="app hidden">
+  <div id="app" class="app">
     <aside class="sidebar glass">
-      <div class="logo">
-        <div class="logo-badge small">⚡</div>
-        <div>
-          <div class="logo-title">Luminiz</div>
-          <div class="logo-sub">Enterprise NOC</div>
-        </div>
-      </div>
-      <nav class="nav">
-        <button class="nav-btn active" data-view="dashboard"><span>📊</span><b>داشبورد</b></button>
-        <button class="nav-btn" data-view="requests"><span>📥</span><b>درخواست‌ها</b></button>
-        <button class="nav-btn" data-view="clients"><span>💻</span><b>کلاینت‌ها</b></button>
-        <button class="nav-btn" data-view="alarms"><span>🚨</span><b>هشدارها</b></button>
-        <button class="nav-btn" data-view="lockdown"><span>🔒</span><b>قفل سیستم</b></button>
-      </nav>
-      <button id="logout-btn" class="nav-btn logout"><span>🚪</span><b>خروج</b></button>
+      <!-- سایدبار: داشبورد، درخواست‌ها، کلاینت‌ها، هشدارها، قفل، خروج -->
     </aside>
-
     <main class="main">
-      <header class="header glass">
-        <div>
-          <h2 id="page-title">داشبورد مدیریت</h2>
-          <p id="page-subtitle" class="muted">پایش زنده وضعیت زیرساخت</p>
-        </div>
-        <div class="header-side">
-          <span class="live-dot" title="رفرش خودکار هر ۵ ثانیه"></span>
-          <div class="clock" id="clock">—</div>
-        </div>
-      </header>
-
-      <!-- داشبورد -->
-      <div id="view-dashboard" class="view active">
-        <div class="kpi-row">
-          <div class="kpi glass"><div class="kpi-icon">💻</div><div class="kpi-title">کلاینت آنلاین</div><div class="kpi-value" id="kpi-clients">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">⏳</div><div class="kpi-title">در انتظار تایید</div><div class="kpi-value" id="kpi-pending">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">✅</div><div class="kpi-title">تاییدشده</div><div class="kpi-value" id="kpi-approved">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">🚨</div><div class="kpi-title">هشدار فعال</div><div class="kpi-value" id="kpi-alarms">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">🔒</div><div class="kpi-title">وضعیت قفل</div><div class="kpi-value" id="kpi-locked">–</div></div>
-        </div>
-        <div class="card glass">
-          <h3>📋 آخرین درخواست‌ها</h3>
-          <div id="recent-requests" class="list"><div class="empty">در حال بارگذاری…</div></div>
-        </div>
-      </div>
-
-      <!-- درخواست‌ها -->
-      <div id="view-requests" class="view">
-        <div class="toolbar">
-          <div class="chips" id="req-filters">
-            <button class="chip active" data-status="">همه</button>
-            <button class="chip" data-status="pending">در انتظار</button>
-            <button class="chip" data-status="approved">تاییدشده</button>
-            <button class="chip" data-status="rejected">ردشده</button>
-          </div>
-          <span id="req-count" class="muted"></span>
-        </div>
-        <div id="req-list" class="grid"><div class="empty">در حال بارگذاری…</div></div>
-      </div>
-
-      <!-- کلاینت‌ها -->
-      <div id="view-clients" class="view">
-        <div id="client-list" class="grid"><div class="empty">در حال بارگذاری…</div></div>
-      </div>
-
-      <!-- هشدارها -->
-      <div id="view-alarms" class="view">
-        <div class="card glass">
-          <h3>ارسال هشدار جدید</h3>
-          <div class="form-grid">
-            <div class="form-row">
-              <label for="alarm-level">سطح</label>
-              <select id="alarm-level">
-                <option value="info">اطلاع</option>
-                <option value="warning">هشدار</option>
-                <option value="critical" selected>بحرانی</option>
-              </select>
-            </div>
-            <div class="form-row">
-              <label for="alarm-dept">واحد هدف</label>
-              <select id="alarm-dept">
-                <option value="all">همه</option>
-                <option value="مدیریت">مدیریت</option>
-                <option value="مالی">مالی</option>
-                <option value="فنی">فنی</option>
-                <option value="فروش">فروش</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <label for="alarm-message">متن پیام</label>
-            <textarea id="alarm-message" rows="3" placeholder="متن هشدار…"></textarea>
-          </div>
-          <button class="btn primary" id="alarm-send">🚨 ارسال هشدار</button>
-        </div>
-        <div class="card glass">
-          <h3>📜 تاریخچه هشدارها</h3>
-          <div id="alarm-history" class="list"><div class="empty">در حال بارگذاری…</div></div>
-        </div>
-      </div>
-
-      <!-- قفل سیستم -->
-      <div id="view-lockdown" class="view">
-        <div class="card glass lock-card">
-          <div id="lock-icon" class="lock-icon">🔓</div>
-          <h3>قفل سراسری سیستم</h3>
-          <p id="lock-state" class="lock-state">—</p>
-          <button id="lock-btn" class="btn big">تغییر وضعیت</button>
-        </div>
-      </div>
+      <!-- محتوای اصلی: داشبورد، درخواست‌ها، کلاینت‌ها، هشدارها، قفل -->
     </main>
   </div>
 
-  <!-- ==================== مودال دستور / پیام ==================== -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-content glass">
-      <h3 id="modal-title">اجرای دستور</h3>
-      <p id="modal-target" class="muted"></p>
-      <textarea id="modal-input" rows="5" class="code" spellcheck="false"></textarea>
-      <div class="modal-actions">
-        <button class="btn primary" id="modal-run">🚀 اجرا</button>
-        <button class="btn ghost" id="modal-close">بستن</button>
-      </div>
-      <pre id="modal-output" class="output"></pre>
-    </div>
-  </div>
+  <!-- مودال دستور / پیام -->
+  <div id="modal" class="modal hidden">...</div>
 
-  <!-- اعلان کوتاه (Toast) -->
+  <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <script src="/static/panel.js"></script>
