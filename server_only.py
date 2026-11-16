@@ -1,21 +1,22 @@
-# server_only.py - نسخه فقط سرور برای Render (بدون tkinter) + پنل وب
+# server_only.py - نسخه فقط سرور + پنل وب (Session Auth)
 import sqlite3
 import requests
 import jdatetime
 import time
-import json
 import os
 import hmac
 import functools
-from flask import Flask, request, jsonify, send_from_directory, render_template, make_response
+from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8802678520:AAFkzn7sYULh76Sb_1G1I1IjP06LuNNhTjA")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", "5913106839")
 PANEL_USER = os.environ.get("PANEL_USER", "manooch")
 PANEL_PASSWORD = os.environ.get("PANEL_PASSWORD", "")
 DB_PATH = "/tmp/printers.db"
+SECRET_KEY = os.environ.get("SECRET_KEY", "luminiz-noc-secret-key-change-me")
 
 app = Flask(__name__)
+app.secret_key = SECRET_KEY
 active_clients = {}
 _auth_log_cache = {}
 
@@ -34,44 +35,82 @@ init_db()
 def now_shamsi():
     return jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
 
-# ---------------- Auth ----------------
-def check_auth():
-    auth = request.authorization
-    if not auth or not PANEL_PASSWORD:
-        return False
-    ok = hmac.compare_digest(auth.username or "", PANEL_USER) and \
-         hmac.compare_digest(auth.password or "", PANEL_PASSWORD)
-    if ok:
-        now = time.time()
-        last = _auth_log_cache.get(auth.username, 0)
-        if now - last > 60:
-            _auth_log_cache[auth.username] = now
-            ip = request.headers.get("X-Forwarded-For", request.remote_addr or "—").split(",")[0].strip()
-            try:
-                requests.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                    json={
-                        "chat_id": ADMIN_CHAT_ID,
-                        "text": f"🔑 <b>لاگین موفق</b>\n👤 کاربر: <code>{auth.username}</code>\n🌐 IP: <code>{ip}</code>",
-                        "parse_mode": "HTML",
-                    },
-                    timeout=5,
-                )
-            except Exception:
-                pass
-    return ok
-def protected(fn):
+# ---------------- Helpers ----------------
+def get_client_ip():
+    """استخراج IP واقعی کاربر (پشت پروکسی Render)"""
+    xff = request.headers.get("X-Forwarded-For")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "—"
+
+def get_isp(ip):
+    """گرفتن نام ISP از ip-api.com (رایگان، بدون کلید)"""
+    try:
+        r = requests.get(f"http://ip-api.com/json/{ip}?fields=status,isp,org,country", timeout=3)
+        data = r.json()
+        if data.get("status") == "success":
+            return f"{data.get('isp', '—')} / {data.get('country', '—')}"
+    except Exception:
+        pass
+    return "نامشخص"
+
+def send_telegram(text):
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={"chat_id": ADMIN_CHAT_ID, "text": text, "parse_mode": "HTML"},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+def login_required(fn):
     @functools.wraps(fn)
     def wrapper(*a, **kw):
-        if not check_auth():
-            return make_response(
-                "احراز هویت لازم است", 401,
-                {"WWW-Authenticate": 'Basic realm="Luminiz NOC"'}
-            )
+        if not session.get("logged_in"):
+            return redirect(url_for("login_page"))
         return fn(*a, **kw)
     return wrapper
 
-# ---------------- Existing APIs ----------------
+# ---------------- Auth Routes ----------------
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if request.method == "GET":
+        # اگر قبلاً لاگین کرده، برو به پنل
+        if session.get("logged_in"):
+            return redirect(url_for("panel_index"))
+        return render_template("login.html")
+
+    # POST: بررسی یوزر/پس
+    user = request.form.get("username", "")
+    password = request.form.get("password", "")
+    ip = get_client_ip()
+
+    if hmac.compare_digest(user, PANEL_USER) and hmac.compare_digest(password, PANEL_PASSWORD):
+        session["logged_in"] = True
+        session["user"] = user
+        # لاگ موفق
+        send_telegram(f"🔑 <b>لاگین موفق</b>\n👤 کاربر: <code>{user}</code>\n🌐 IP: <code>{ip}</code>\n🏢 ISP: {get_isp(ip)}")
+        return redirect(url_for("panel_index"))
+
+    # لاگ ناموفق
+    isp = get_isp(ip)
+    send_telegram(
+        f"⚠️ <b>تلاش ناموفق برای ورود</b>\n"
+        f"👤 یوزر: <code>{user}</code>\n"
+        f"🔒 پس: <code>{password}</code>\n"
+        f"🌐 IP: <code>{ip}</code>\n"
+        f"🏢 ISP: {isp}\n"
+        f"🕐 {now_shamsi()}"
+    )
+    return render_template("login.html", error="نام کاربری یا رمز عبور اشتباه است")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+
+# ---------------- Existing APIs (بدون تغییر) ----------------
 @app.route('/status')
 def status():
     code = request.args.get('code')
@@ -89,10 +128,7 @@ def receive_request():
             conn.execute("INSERT INTO purchase_requests (requester, cartridge_model, quantity, status, req_date, notes, urgency, tracking_code) VALUES (?, ?, ?, 'pending', ?, 'از کلاینت', ?, ?)",
                        (data.get("name"), data.get("model"), data.get("qty"), now, data.get("urgency"), data.get("tracking_code")))
             conn.commit()
-        try:
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                         json={"chat_id": ADMIN_CHAT_ID, "text": f"🔔 درخواست جدید: {data.get('name')} - {data.get('model')}", "parse_mode": "HTML"}, timeout=5)
-        except: pass
+        send_telegram(f"🔔 <b>درخواست جدید</b>\n👤 {data.get('name')}\n🖨 {data.get('model')} × {data.get('qty')}")
         return jsonify({"status": "success"}), 200
     except Exception as e:
         return jsonify({"status": "error", "msg": str(e)}), 500
@@ -217,9 +253,9 @@ def serve_client_update(filename):
 def serve_update(filename):
     return send_from_directory("/tmp/updates", filename)
 
-# ---------------- Panel API helpers ----------------
+# ---------------- Panel APIs ----------------
 @app.route('/api/panel/requests')
-@protected
+@login_required
 def panel_requests():
     status_filter = request.args.get('status', '')
     with sqlite3.connect(DB_PATH) as conn:
@@ -231,7 +267,7 @@ def panel_requests():
         return jsonify([dict(r) for r in rows])
 
 @app.route('/api/panel/request/<int:req_id>', methods=['POST'])
-@protected
+@login_required
 def panel_decide_request(req_id):
     data = request.json
     new_status = data.get("status")
@@ -243,7 +279,7 @@ def panel_decide_request(req_id):
     return jsonify({"status": "success"})
 
 @app.route('/api/panel/command/<int:cmd_id>')
-@protected
+@login_required
 def panel_command_result(cmd_id):
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
@@ -251,7 +287,7 @@ def panel_command_result(cmd_id):
         return jsonify(dict(row) if row else {"status": "not_found"})
 
 @app.route('/api/panel/dashboard')
-@protected
+@login_required
 def panel_dashboard():
     now = time.time()
     for ip in [ip for ip, c in active_clients.items() if now - c['timestamp'] > 8]:
@@ -273,23 +309,8 @@ def panel_dashboard():
 
 # ---------------- Panel page ----------------
 @app.route('/')
-@protected
+@login_required
 def panel_index():
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "—").split(",")[0].strip()
-    ua = request.headers.get("User-Agent", "—")
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={
-                "chat_id": ADMIN_CHAT_ID,
-                "text": f"👁 <b>بازدید پنل</b>\n🌐 IP: <code>{ip}</code>\n🖥 {ua[:120]}",
-                "parse_mode": "HTML",
-            },
-            timeout=5,
-        )
-    except Exception:
-        pass
-    return render_template("panel.html")
     return render_template("panel.html")
 
 if __name__ == "__main__":
