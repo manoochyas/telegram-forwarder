@@ -1,19 +1,24 @@
-# server_only.py - نسخه فقط سرور برای Render (بدون tkinter)
+# server_only.py - نسخه فقط سرور برای Render (بدون tkinter) + پنل وب
 import sqlite3
 import requests
 import jdatetime
 import time
 import json
-from flask import Flask, request, jsonify, send_from_directory
 import os
+import hmac
+import functools
+from flask import Flask, request, jsonify, send_from_directory, render_template, make_response
 
-BOT_TOKEN = "8802678520:AAFkzn7sYULh76Sb_1G1I1IjP06LuNNhTjA"
-ADMIN_CHAT_ID = "5913106839"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8802678520:AAFkzn7sYULh76Sb_1G1I1IjP06LuNNhTjA")
+ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", "5913106839")
+PANEL_USER = os.environ.get("PANEL_USER", "manooch")
+PANEL_PASSWORD = os.environ.get("PANEL_PASSWORD", "")
 DB_PATH = "/tmp/printers.db"
 
 app = Flask(__name__)
 active_clients = {}
 
+# ---------------- DB ----------------
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS purchase_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, requester TEXT, cartridge_model TEXT, quantity INTEGER, status TEXT, req_date TEXT, notes TEXT, urgency TEXT, tracking_code TEXT)")
@@ -25,6 +30,29 @@ def init_db():
 
 init_db()
 
+def now_shamsi():
+    return jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
+
+# ---------------- Auth ----------------
+def check_auth():
+    auth = request.authorization
+    if not auth or not PANEL_PASSWORD:
+        return False
+    return hmac.compare_digest(auth.username or "", PANEL_USER) and \
+           hmac.compare_digest(auth.password or "", PANEL_PASSWORD)
+
+def protected(fn):
+    @functools.wraps(fn)
+    def wrapper(*a, **kw):
+        if not check_auth():
+            return make_response(
+                "احراز هویت لازم است", 401,
+                {"WWW-Authenticate": 'Basic realm="Luminiz NOC"'}
+            )
+        return fn(*a, **kw)
+    return wrapper
+
+# ---------------- Existing APIs ----------------
 @app.route('/status')
 def status():
     code = request.args.get('code')
@@ -37,7 +65,7 @@ def status():
 def receive_request():
     try:
         data = request.json
-        now = jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
+        now = now_shamsi()
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute("INSERT INTO purchase_requests (requester, cartridge_model, quantity, status, req_date, notes, urgency, tracking_code) VALUES (?, ?, ?, 'pending', ?, 'از کلاینت', ?, ?)",
                        (data.get("name"), data.get("model"), data.get("qty"), now, data.get("urgency"), data.get("tracking_code")))
@@ -69,7 +97,7 @@ def get_clients():
 @app.route('/send_alarm', methods=['POST'])
 def send_alarm():
     data = request.json
-    now = jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
+    now = now_shamsi()
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("INSERT INTO alarms (message, level, target_dept, created_at, status) VALUES (?, ?, ?, ?, 'active')",
                     (data.get("message"), data.get("level", "critical"), data.get("target_dept", "all"), now))
@@ -88,7 +116,7 @@ def get_alarms():
 
 @app.route('/mark_alarm_read/<int:alarm_id>', methods=['POST'])
 def mark_alarm_read(alarm_id):
-    now = jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
+    now = now_shamsi()
     try: user = (request.get_json(silent=True) or {}).get("user_name", "Unknown")
     except: user = "Unknown"
     with sqlite3.connect(DB_PATH) as conn:
@@ -128,7 +156,7 @@ def get_lockdown():
 @app.route('/execute_command', methods=['POST'])
 def execute_command():
     data = request.json
-    now = jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
+    now = now_shamsi()
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("INSERT INTO remote_commands (client_ip, client_hostname, command, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
                     (data.get("ip"), data.get("hostname", ""), data.get("command"), now))
@@ -155,6 +183,13 @@ def submit_command_result():
         conn.commit()
     return jsonify({"status": "success"})
 
+@app.route('/get_command_result/<int:cmd_id>')
+def get_command_result(cmd_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM remote_commands WHERE id=?", (cmd_id,)).fetchone()
+        return jsonify(dict(row) if row else {"status": "not_found"})
+
 @app.route('/client_updates/<path:filename>')
 def serve_client_update(filename):
     return send_from_directory("/tmp/client_updates", filename)
@@ -162,6 +197,66 @@ def serve_client_update(filename):
 @app.route('/updates/<path:filename>')
 def serve_update(filename):
     return send_from_directory("/tmp/updates", filename)
+
+# ---------------- Panel API helpers ----------------
+@app.route('/api/panel/requests')
+@protected
+def panel_requests():
+    status_filter = request.args.get('status', '')
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        if status_filter:
+            rows = conn.execute("SELECT * FROM purchase_requests WHERE status=? ORDER BY id DESC LIMIT 200", (status_filter,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM purchase_requests ORDER BY id DESC LIMIT 200").fetchall()
+        return jsonify([dict(r) for r in rows])
+
+@app.route('/api/panel/request/<int:req_id>', methods=['POST'])
+@protected
+def panel_decide_request(req_id):
+    data = request.json
+    new_status = data.get("status")
+    if new_status not in ("approved", "rejected"):
+        return jsonify({"status": "error"}), 400
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE purchase_requests SET status=? WHERE id=? AND status='pending'", (new_status, req_id))
+        conn.commit()
+    return jsonify({"status": "success"})
+
+@app.route('/api/panel/command/<int:cmd_id>')
+@protected
+def panel_command_result(cmd_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM remote_commands WHERE id=?", (cmd_id,)).fetchone()
+        return jsonify(dict(row) if row else {"status": "not_found"})
+
+@app.route('/api/panel/dashboard')
+@protected
+def panel_dashboard():
+    now = time.time()
+    for ip in [ip for ip, c in active_clients.items() if now - c['timestamp'] > 8]:
+        del active_clients[ip]
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        counts = {r['status']: r['n'] for r in conn.execute("SELECT status, COUNT(*) n FROM purchase_requests GROUP BY status")}
+        alarms = conn.execute("SELECT COUNT(*) FROM alarms WHERE status='active'").fetchone()[0]
+        recent = [dict(r) for r in conn.execute("SELECT * FROM purchase_requests ORDER BY id DESC LIMIT 8")]
+        lock = conn.execute("SELECT is_active FROM lockdown WHERE id=1").fetchone()
+    return jsonify({
+        "clients": len(active_clients),
+        "pending": counts.get("pending", 0),
+        "approved": counts.get("approved", 0),
+        "alarms": alarms,
+        "locked": bool(lock[0]) if lock else False,
+        "recent": recent,
+    })
+
+# ---------------- Panel page ----------------
+@app.route('/')
+@protected
+def panel_index():
+    return render_template("panel.html")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=False)
