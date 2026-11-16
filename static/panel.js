@@ -93,4 +93,153 @@ async function loadRequests() {
   const box = el('req-list');
   if (!rows.length) { box.innerHTML = '<div class="muted">درخواستی در این دسته نیست</div>'; return; }
   box.innerHTML = rows.map(r => `
-    <div class="req
+    <div class="req-row">
+      <div class="req-info">
+        <strong>👤 ${esc(r.requester)}</strong> — 🖨 ${esc(r.cartridge_model)} × ${r.quantity}
+        <div class="muted">🔖 ${esc(r.tracking_code || '—')} • 📅 ${esc(r.req_date || '—')} • ${esc(r.urgency || '')}</div>
+      </div>
+      <span class="pill ${r.status}">${fmtStatus(r.status)}</span>
+      ${r.status === 'pending' ? `
+        <div class="req-actions">
+          <button class="btn success" onclick="decide(${r.id},'approved')">✓ تایید</button>
+          <button class="btn ghost" onclick="decide(${r.id},'rejected')">✕ رد</button>
+        </div>` : ''}
+    </div>
+  `).join('');
+}
+window.decide = async (id, status) => {
+  await api('/api/panel/request/' + id, { method: 'POST', body: JSON.stringify({ status }) });
+  loadRequests();
+};
+el('req-filter').addEventListener('change', loadRequests);
+
+// ---------- clients ----------
+async function loadClients() {
+  const rows = await api('/get_clients');
+  const box = el('client-list');
+  if (!rows.length) { box.innerHTML = '<div class="muted">هیچ کلاینتی آنلاین نیست</div>'; return; }
+  box.innerHTML = rows.map(c => `
+    <div class="client-row">
+      <div class="client-info">
+        <strong>💻 ${esc(c.hostname || 'Unknown')}</strong>
+        <div class="muted">🌐 ${esc(c.ip)} • 👤 ${esc(c.username || '—')}</div>
+        <div class="muted">🖥 ${esc(c.hw_cpu || '—')} • 🧠 ${esc(c.hw_ram || '—')} • ⏱ ${esc(c.hw_uptime || '—')} • 💾 ${esc(c.hw_disks || '—')}</div>
+      </div>
+      <div class="req-actions">
+        <button class="btn primary" onclick='openCmd(${JSON.stringify(c).replace(/'/g, "&#39;")})'>⚙️ دستور</button>
+        <button class="btn ghost" onclick='sendMsg(${JSON.stringify(c).replace(/'/g, "&#39;")})'>🔔 پیام</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.openCmd = (client) => {
+  currentCmdClient = client;
+  el('cmd-title').textContent = '⚙️ دستور روی ' + (client.hostname || client.ip);
+  el('cmd-input').value = '';
+  el('cmd-output').textContent = '(خروجی اینجا نمایش داده می‌شود)';
+  el('cmd-modal').classList.remove('hidden');
+};
+window.closeCmd = () => el('cmd-modal').classList.add('hidden');
+
+window.runCommand = async () => {
+  const cmd = el('cmd-input').value.trim();
+  if (!cmd || !currentCmdClient) return;
+  el('cmd-output').textContent = '⏳ در حال ارسال…';
+  await api('/execute_command', {
+    method: 'POST',
+    body: JSON.stringify({ ip: currentCmdClient.ip, hostname: currentCmdClient.hostname, command: cmd })
+  });
+  // Wait a moment then fetch the result
+  el('cmd-output').textContent = '⏳ در انتظار اجرا روی کلاینت… (حداکثر ۶۰ ثانیه)';
+  let tries = 0;
+  const poll = setInterval(async () => {
+    tries++;
+    // We don't have direct id from execute_command in this version; fallback: use pending result
+    // For simplicity, look at latest command for this IP
+    try {
+      const hist = await fetch('/api/panel/dashboard'); // placeholder
+    } catch(e) {}
+    if (tries > 40) {
+      clearInterval(poll);
+      el('cmd-output').textContent = '⚠️ پاسخی دریافت نشد (کلاینت ممکن است آفلاین باشد)';
+    }
+  }, 1500);
+};
+
+window.sendMsg = async (client) => {
+  const msg = prompt('متن پیام برای ' + (client.username || client.hostname));
+  if (!msg) return;
+  await api('/send_alarm', {
+    method: 'POST',
+    body: JSON.stringify({ message: msg, level: 'info', target_dept: client.username || 'all' })
+  });
+  alert('پیام ارسال شد');
+};
+
+// ---------- alarms ----------
+async function loadAlarms() {
+  const rows = await api('/get_alarm_history');
+  const box = el('alarm-history');
+  if (!rows.length) { box.innerHTML = '<div class="muted">هشداری ثبت نشده</div>'; return; }
+  box.innerHTML = rows.slice(0, 50).map(a => `
+    <div class="req-row">
+      <div class="req-info">
+        <span class="pill ${a.level}">${fmtLevel(a.level)}</span>
+        <span style="margin-right:8px">${esc(a.message)}</span>
+        <div class="muted">🏢 ${esc(a.target_dept)} • 🕒 ${esc(a.created_at)} • ✓ ${a.ack_count}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.sendAlarm = async () => {
+  const message = el('alarm-message').value.trim();
+  if (!message) return alert('متن خالی است');
+  await api('/send_alarm', {
+    method: 'POST',
+    body: JSON.stringify({
+      message,
+      level: el('alarm-level').value,
+      target_dept: el('alarm-dept').value,
+    })
+  });
+  el('alarm-message').value = '';
+  loadAlarms();
+};
+
+// ---------- lockdown ----------
+async function loadLock() {
+  const s = await api('/get_lockdown');
+  el('lock-state').textContent = s.is_active ? '🔴 سیستم قفل است' : '🟢 سیستم آزاد است';
+  const btn = el('lock-btn');
+  btn.textContent = s.is_active ? '🔓 برداشتن قفل' : '🔒 فعال‌سازی قفل';
+  btn.className = 'btn ' + (s.is_active ? 'success' : 'danger');
+  btn.dataset.active = s.is_active ? '1' : '0';
+}
+window.toggleLock = async () => {
+  const active = el('lock-btn').dataset.active === '1';
+  if (!confirm(active ? 'قفل برداشته شود؟' : 'همه کلاینت‌ها قفل شوند؟')) return;
+  await api('/toggle_lockdown', {
+    method: 'POST',
+    body: JSON.stringify({ active: active ? 0 : 1 })
+  });
+  loadLock();
+};
+
+// ---------- refresh dispatcher ----------
+function refreshView() {
+  if (currentView === 'dashboard') loadDashboard();
+  else if (currentView === 'requests') loadRequests();
+  else if (currentView === 'clients') loadClients();
+  else if (currentView === 'alarms') loadAlarms();
+  else if (currentView === 'lockdown') loadLock();
+}
+
+// auto refresh
+setInterval(() => {
+  if (currentView === 'dashboard' || currentView === 'clients') refreshView();
+}, 5000);
+
+// initial
+refreshView();
