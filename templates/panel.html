@@ -1,151 +1,957 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Luminiz Enterprise NOC</title>
+  <meta name="theme-color" content="#060912">
+  <meta name="color-scheme" content="dark">
+
+  <title>Luminiz | Enterprise NOC</title>
+
   <link rel="stylesheet" href="/static/panel.css">
+
+  <style>
+    /* Luminiz 2026 — HTML enhancements */
+
+    .noc-icon {
+      width: 21px;
+      height: 21px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .nav-btn .noc-icon {
+      width: 21px;
+      height: 21px;
+    }
+
+    .brand-symbol {
+      width: 27px;
+      height: 27px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2.3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .noc-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 6px;
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .3px;
+    }
+
+    .noc-eyebrow::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--cyan);
+    }
+
+    .noc-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .noc-section-head h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 750;
+    }
+
+    .noc-section-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .noc-soft-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.045);
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .noc-soft-tag .noc-icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .noc-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border: 1px solid rgba(72,218,166,.22);
+      border-radius: 100px;
+      background: rgba(72,218,166,.08);
+      color: #92f3cb;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .noc-status-pill::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    .noc-welcome {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 25px 29px;
+      overflow: hidden;
+    }
+
+    .noc-welcome h3 {
+      font-size: clamp(19px,2.4vw,25px);
+      margin-bottom: 8px;
+      font-weight: 800;
+    }
+
+    .noc-welcome p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.9;
+    }
+
+    .noc-welcome-art {
+      display: grid;
+      place-items: center;
+      width: 95px;
+      height: 95px;
+      flex-shrink: 0;
+      border-radius: 30px;
+      background: linear-gradient(
+        135deg,
+        rgba(101,152,255,.23),
+        rgba(167,139,250,.10)
+      );
+      border: 1px solid rgba(155,181,255,.20);
+    }
+
+    .noc-welcome-art .noc-icon {
+      width: 49px;
+      height: 49px;
+      stroke: #9ec3ff;
+      stroke-width: 1.35;
+    }
+
+    .noc-kpi-icon {
+      width: 25px;
+      height: 25px;
+      stroke-width: 1.8;
+    }
+
+    .noc-quick-note {
+      margin-top: 13px;
+      padding: 13px 15px;
+      border-radius: 14px;
+      background: rgba(101,152,255,.055);
+      border: 1px solid rgba(101,152,255,.12);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.9;
+    }
+
+    .noc-block {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .noc-panel-intro {
+      padding: 20px 23px;
+    }
+
+    .noc-panel-intro h3 {
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .noc-panel-intro p {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 7px;
+    }
+
+    .noc-form-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 5px;
+    }
+
+    .noc-modal-eyebrow {
+      font-size: 11px;
+      color: var(--cyan);
+      margin-bottom: 8px;
+    }
+
+    .noc-modal-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .noc-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 18px 0;
+    }
+
+    .noc-footer {
+      padding: 5px 6px 16px;
+      color: var(--muted);
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      opacity: .8;
+    }
+
+    .noc-footer span:last-child {
+      direction: ltr;
+    }
+
+    .noc-lock-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 20px;
+      line-height: 1.9;
+    }
+
+    .noc-lock-warning {
+      color: var(--yellow);
+      font-size: 12px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 760px) {
+      .noc-welcome {
+        padding: 20px;
+      }
+
+      .noc-welcome-art {
+        width: 65px;
+        height: 65px;
+        border-radius: 21px;
+      }
+
+      .noc-welcome-art .noc-icon {
+        width: 35px;
+        height: 35px;
+      }
+
+      .noc-section-head {
+        align-items: flex-start;
+      }
+
+      .noc-panel-intro {
+        padding: 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .noc-welcome-art {
+        display: none;
+      }
+
+      .noc-welcome h3 {
+        font-size: 19px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-  <!-- پس‌زمینه با لکه‌های نورانی برای افکت شیشه‌ای -->
+  <!-- SVG ICON LIBRARY -->
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    style="position:absolute;width:0;height:0;overflow:hidden"
+    aria-hidden="true"
+  >
+    <symbol id="i-grid" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="2"/>
+      <rect x="14" y="3" width="7" height="7" rx="2"/>
+      <rect x="3" y="14" width="7" height="7" rx="2"/>
+      <rect x="14" y="14" width="7" height="7" rx="2"/>
+    </symbol>
+
+    <symbol id="i-inbox" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="3"/>
+      <path d="M3 14h5l2 3h4l2-3h5"/>
+    </symbol>
+
+    <symbol id="i-monitor" viewBox="0 0 24 24">
+      <rect x="2" y="3" width="20" height="15" rx="3"/>
+      <path d="M8 22h8M12 18v4"/>
+    </symbol>
+
+    <symbol id="i-bell" viewBox="0 0 24 24">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+      <path d="M10 21h4"/>
+    </symbol>
+
+    <symbol id="i-lock" viewBox="0 0 24 24">
+      <rect x="4" y="10" width="16" height="11" rx="3"/>
+      <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+      <path d="M12 15v2"/>
+    </symbol>
+
+    <symbol id="i-logout" viewBox="0 0 24 24">
+      <path d="M10 4H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h4"/>
+      <path d="M14 16l4-4-4-4"/>
+      <path d="M8 12h10"/>
+    </symbol>
+
+    <symbol id="i-activity" viewBox="0 0 24 24">
+      <path d="M2 12h4l3-8 6 16 3-8h4"/>
+    </symbol>
+
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M4 12l5 5L20 6"/>
+    </symbol>
+
+    <symbol id="i-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3 2"/>
+    </symbol>
+
+    <symbol id="i-server" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="8" rx="2"/>
+      <rect x="3" y="13" width="18" height="8" rx="2"/>
+      <path d="M7 7h.01M7 17h.01M11 7h7M11 17h7"/>
+    </symbol>
+
+    <symbol id="i-shield" viewBox="0 0 24 24">
+      <path d="M12 2L21 6v6c0 5-4 8-9 10-5-2-9-5-9-10V6z"/>
+      <path d="M9 12l2 2 4-4"/>
+    </symbol>
+
+    <symbol id="i-send" viewBox="0 0 24 24">
+      <path d="M22 2L11 13"/>
+      <path d="M22 2L15 22l-4-9-9-4z"/>
+    </symbol>
+
+    <symbol id="i-code" viewBox="0 0 24 24">
+      <path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 4l-4 16"/>
+    </symbol>
+
+    <symbol id="i-sparkles" viewBox="0 0 24 24">
+      <path d="M12 2l2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1z"/>
+    </symbol>
+
+    <symbol id="i-list" viewBox="0 0 24 24">
+      <path d="M9 6h12M9 12h12M9 18h12"/>
+      <path d="M4 6h.01M4 12h.01M4 18h.01"/>
+    </symbol>
+  </svg>
+
+  <!-- AMBIENT BACKGROUND -->
   <div class="bg-orbs" aria-hidden="true">
     <span class="orb orb-1"></span>
     <span class="orb orb-2"></span>
     <span class="orb orb-3"></span>
   </div>
 
-  <!-- ==================== پنل اصلی ==================== -->
+  <!-- MAIN APPLICATION -->
   <div id="app" class="app">
+
+    <!-- SIDEBAR -->
     <aside class="sidebar glass">
+
       <div class="logo">
-        <div class="logo-badge small">⚡</div>
+        <div class="logo-badge small">
+          <svg class="brand-symbol" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M13 2L4 13h7l-1 9 10-12h-7z"/>
+          </svg>
+        </div>
+
         <div>
           <div class="logo-title">Luminiz</div>
-          <div class="logo-sub">Enterprise NOC</div>
+          <div class="logo-sub">ENTERPRISE NOC</div>
         </div>
       </div>
-      <nav class="nav">
-        <button class="nav-btn active" data-view="dashboard"><span>📊</span><b>داشبورد</b></button>
-        <button class="nav-btn" data-view="requests"><span>📥</span><b>درخواست‌ها</b></button>
-        <button class="nav-btn" data-view="clients"><span>💻</span><b>کلاینت‌ها</b></button>
-        <button class="nav-btn" data-view="alarms"><span>🚨</span><b>هشدارها</b></button>
-        <button class="nav-btn" data-view="lockdown"><span>🔒</span><b>قفل سیستم</b></button>
+
+      <nav class="nav" aria-label="منوی اصلی">
+
+        <button
+          type="button"
+          class="nav-btn active"
+          data-view="dashboard"
+          aria-label="داشبورد"
+        >
+          <svg class="noc-icon"><use href="#i-grid"/></svg>
+          <b>داشبورد</b>
+        </button>
+
+        <button
+          type="button"
+          class="nav-btn"
+          data-view="requests"
+          aria-label="درخواست‌ها"
+        >
+          <svg class="noc-icon"><use href="#i-inbox"/></svg>
+          <b>درخواست‌ها</b>
+        </button>
+
+        <button
+          type="button"
+          class="nav-btn"
+          data-view="clients"
+          aria-label="کلاینت‌ها"
+        >
+          <svg class="noc-icon"><use href="#i-monitor"/></svg>
+          <b>کلاینت‌ها</b>
+        </button>
+
+        <button
+          type="button"
+          class="nav-btn"
+          data-view="alarms"
+          aria-label="هشدارها"
+        >
+          <svg class="noc-icon"><use href="#i-bell"/></svg>
+          <b>هشدارها</b>
+        </button>
+
+        <button
+          type="button"
+          class="nav-btn"
+          data-view="lockdown"
+          aria-label="قفل سیستم"
+        >
+          <svg class="noc-icon"><use href="#i-lock"/></svg>
+          <b>قفل سیستم</b>
+        </button>
+
       </nav>
-      <button id="logout-btn" class="nav-btn logout"><span>🚪</span><b>خروج</b></button>
+
+      <button
+        type="button"
+        id="logout-btn"
+        class="nav-btn logout"
+        aria-label="خروج از پنل"
+      >
+        <svg class="noc-icon"><use href="#i-logout"/></svg>
+        <b>خروج امن</b>
+      </button>
+
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main">
+
+      <!-- HEADER -->
       <header class="header glass">
+
         <div>
+          <div class="noc-eyebrow">
+            LUMINIZ CONTROL CENTER
+          </div>
+
           <h2 id="page-title">داشبورد مدیریت</h2>
-          <p id="page-subtitle" class="muted">پایش زنده وضعیت زیرساخت</p>
+
+          <p id="page-subtitle" class="muted">
+            پایش زنده وضعیت زیرساخت
+          </p>
         </div>
+
         <div class="header-side">
-          <span class="live-dot" title="رفرش خودکار هر ۵ ثانیه"></span>
-          <div class="clock" id="clock">—</div>
+          <span
+            class="live-dot"
+            title="رفرش خودکار اطلاعات"
+            aria-hidden="true"
+          ></span>
+
+          <div id="clock" class="clock">
+            در حال بارگذاری...
+          </div>
         </div>
+
       </header>
 
-      <!-- داشبورد -->
-      <div id="view-dashboard" class="view active">
-        <div class="kpi-row">
-          <div class="kpi glass"><div class="kpi-icon">💻</div><div class="kpi-title">کلاینت آنلاین</div><div class="kpi-value" id="kpi-clients">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">⏳</div><div class="kpi-title">در انتظار تایید</div><div class="kpi-value" id="kpi-pending">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">✅</div><div class="kpi-title">تاییدشده</div><div class="kpi-value" id="kpi-approved">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">🚨</div><div class="kpi-title">هشدار فعال</div><div class="kpi-value" id="kpi-alarms">–</div></div>
-          <div class="kpi glass"><div class="kpi-icon">🔒</div><div class="kpi-title">وضعیت قفل</div><div class="kpi-value" id="kpi-locked">–</div></div>
-        </div>
-        <div class="card glass">
-          <h3>📋 آخرین درخواست‌ها</h3>
-          <div id="recent-requests" class="list"><div class="empty">در حال بارگذاری…</div></div>
-        </div>
-      </div>
+      <!-- ============== DASHBOARD ============== -->
+      <section
+        id="view-dashboard"
+        class="view active"
+        aria-label="داشبورد"
+      >
 
-      <!-- درخواست‌ها -->
-      <div id="view-requests" class="view">
-        <div class="toolbar">
-          <div class="chips" id="req-filters">
-            <button class="chip active" data-status="">همه</button>
-            <button class="chip" data-status="pending">در انتظار</button>
-            <button class="chip" data-status="approved">تاییدشده</button>
-            <button class="chip" data-status="rejected">ردشده</button>
+        <!-- WELCOME -->
+        <div class="noc-welcome glass">
+          <div>
+            <div class="noc-eyebrow">
+              NETWORK OPERATIONS CENTER
+            </div>
+
+            <h3>مرکز فرماندهی زیرساخت شما</h3>
+
+            <p>
+              مدیریت یکپارچه کلاینت‌ها، درخواست‌ها،
+              هشدارها و وضعیت امنیتی سازمان
+            </p>
           </div>
-          <span id="req-count" class="muted"></span>
+
+          <div class="noc-welcome-art" aria-hidden="true">
+            <svg class="noc-icon">
+              <use href="#i-activity"/>
+            </svg>
+          </div>
         </div>
-        <div id="req-list" class="grid"><div class="empty">در حال بارگذاری…</div></div>
-      </div>
 
-      <!-- کلاینت‌ها -->
-      <div id="view-clients" class="view">
-        <div id="client-list" class="grid"><div class="empty">در حال بارگذاری…</div></div>
-      </div>
+        <!-- KPI CARDS -->
+        <div class="kpi-row">
 
-      <!-- هشدارها -->
-      <div id="view-alarms" class="view">
+          <article class="kpi glass">
+            <div class="kpi-icon">
+              <svg class="noc-icon noc-kpi-icon">
+                <use href="#i-monitor"/>
+              </svg>
+            </div>
+            <div class="kpi-title">کلاینت‌های آنلاین</div>
+            <div class="kpi-value" id="kpi-clients">—</div>
+          </article>
+
+          <article class="kpi glass">
+            <div class="kpi-icon">
+              <svg class="noc-icon noc-kpi-icon">
+                <use href="#i-clock"/>
+              </svg>
+            </div>
+            <div class="kpi-title">در انتظار تأیید</div>
+            <div class="kpi-value" id="kpi-pending">—</div>
+          </article>
+
+          <article class="kpi glass">
+            <div class="kpi-icon">
+              <svg class="noc-icon noc-kpi-icon">
+                <use href="#i-check"/>
+              </svg>
+            </div>
+            <div class="kpi-title">درخواست‌های تأییدشده</div>
+            <div class="kpi-value" id="kpi-approved">—</div>
+          </article>
+
+          <article class="kpi glass">
+            <div class="kpi-icon">
+              <svg class="noc-icon noc-kpi-icon">
+                <use href="#i-bell"/>
+              </svg>
+            </div>
+            <div class="kpi-title">هشدارهای فعال</div>
+            <div class="kpi-value" id="kpi-alarms">—</div>
+          </article>
+
+          <article class="kpi glass">
+            <div class="kpi-icon">
+              <svg class="noc-icon noc-kpi-icon">
+                <use href="#i-lock"/>
+              </svg>
+            </div>
+            <div class="kpi-title">وضعیت قفل</div>
+            <div class="kpi-value" id="kpi-locked">—</div>
+          </article>
+
+        </div>
+
+        <!-- RECENT REQUESTS -->
         <div class="card glass">
-          <h3>ارسال هشدار جدید</h3>
+
+          <div class="noc-section-head">
+            <div>
+              <h3>آخرین درخواست‌ها</h3>
+              <p class="noc-section-sub">
+                جدیدترین درخواست‌های ثبت‌شده در سیستم
+              </p>
+            </div>
+
+            <span class="noc-soft-tag">
+              <svg class="noc-icon">
+                <use href="#i-list"/>
+              </svg>
+              فعالیت‌های اخیر
+            </span>
+          </div>
+
+          <div id="recent-requests" class="list">
+            <div class="empty">در حال دریافت اطلاعات...</div>
+          </div>
+
+        </div>
+
+        <div class="noc-quick-note">
+          اطلاعات داشبورد به‌صورت خودکار از سرور دریافت می‌شود.
+          وضعیت نمایش‌داده‌شده به اتصال شبکه و پاسخ API وابسته است.
+        </div>
+
+      </section>
+
+      <!-- ============== REQUESTS ============== -->
+      <section
+        id="view-requests"
+        class="view"
+        aria-label="مدیریت درخواست‌ها"
+      >
+
+        <div class="noc-panel-intro glass">
+          <h3>مدیریت هوشمند درخواست‌ها</h3>
+          <p>
+            مشاهده، بررسی و تصمیم‌گیری درباره درخواست‌های
+            خرید کارتریج
+          </p>
+        </div>
+
+        <div class="toolbar">
+
+          <div id="req-filters" class="chips">
+            <button
+              type="button"
+              class="chip active"
+              data-status=""
+            >همه درخواست‌ها</button>
+
+            <button
+              type="button"
+              class="chip"
+              data-status="pending"
+            >در انتظار</button>
+
+            <button
+              type="button"
+              class="chip"
+              data-status="approved"
+            >تأییدشده</button>
+
+            <button
+              type="button"
+              class="chip"
+              data-status="rejected"
+            >ردشده</button>
+          </div>
+
+          <span id="req-count" class="noc-soft-tag">
+            در حال بارگذاری...
+          </span>
+
+        </div>
+
+        <div id="req-list" class="grid">
+          <div class="empty">در حال دریافت درخواست‌ها...</div>
+        </div>
+
+      </section>
+
+      <!-- ============== CLIENTS ============== -->
+      <section
+        id="view-clients"
+        class="view"
+        aria-label="مدیریت کلاینت‌ها"
+      >
+
+        <div class="noc-panel-intro glass">
+          <div class="noc-section-head">
+            <div>
+              <h3>مدیریت کلاینت‌های شبکه</h3>
+              <p>
+                مشاهده مشخصات سخت‌افزاری و وضعیت
+                دستگاه‌های متصل
+              </p>
+            </div>
+
+            <span class="noc-soft-tag">
+              <svg class="noc-icon">
+                <use href="#i-server"/>
+              </svg>
+              Device Management
+            </span>
+          </div>
+        </div>
+
+        <div id="client-list" class="grid">
+          <div class="empty">
+            در حال دریافت اطلاعات کلاینت‌ها...
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============== ALARMS ============== -->
+      <section
+        id="view-alarms"
+        class="view"
+        aria-label="مرکز هشدارها"
+      >
+
+        <!-- SEND ALARM -->
+        <div class="card glass">
+
+          <div class="noc-section-head">
+            <div>
+              <h3>ارسال هشدار جدید</h3>
+              <p class="noc-section-sub">
+                ایجاد اعلان برای کاربران و واحدهای سازمان
+              </p>
+            </div>
+
+            <span class="noc-soft-tag">
+              <svg class="noc-icon">
+                <use href="#i-bell"/>
+              </svg>
+              Alert Center
+            </span>
+          </div>
+
           <div class="form-grid">
+
             <div class="form-row">
-              <label for="alarm-level">سطح</label>
+              <label for="alarm-level">سطح هشدار</label>
+
               <select id="alarm-level">
-                <option value="info">اطلاع</option>
+                <option value="info">اطلاع‌رسانی</option>
                 <option value="warning">هشدار</option>
-                <option value="critical" selected>بحرانی</option>
+                <option value="critical" selected>
+                  بحرانی
+                </option>
               </select>
             </div>
+
             <div class="form-row">
-              <label for="alarm-dept">واحد هدف</label>
+              <label for="alarm-dept">واحد دریافت‌کننده</label>
+
               <select id="alarm-dept">
-                <option value="all">همه</option>
+                <option value="all">تمام واحدها</option>
                 <option value="مدیریت">مدیریت</option>
                 <option value="مالی">مالی</option>
                 <option value="فنی">فنی</option>
                 <option value="فروش">فروش</option>
               </select>
             </div>
+
           </div>
+
           <div class="form-row">
-            <label for="alarm-message">متن پیام</label>
-            <textarea id="alarm-message" rows="3" placeholder="متن هشدار…"></textarea>
+            <label for="alarm-message">متن هشدار</label>
+
+            <textarea
+              id="alarm-message"
+              rows="4"
+              maxlength="2000"
+              placeholder="متن هشدار را وارد کنید..."
+            ></textarea>
           </div>
-          <button class="btn primary" id="alarm-send">🚨 ارسال هشدار</button>
+
+          <div class="noc-form-actions">
+            <button
+              type="button"
+              class="btn primary"
+              id="alarm-send"
+            >
+              <svg class="noc-icon">
+                <use href="#i-send"/>
+              </svg>
+              ارسال هشدار
+            </button>
+
+            <span class="muted">
+              قبل از ارسال، متن و واحد هدف را بررسی کنید.
+            </span>
+          </div>
+
         </div>
+
+        <!-- ALARM HISTORY -->
         <div class="card glass">
-          <h3>📜 تاریخچه هشدارها</h3>
-          <div id="alarm-history" class="list"><div class="empty">در حال بارگذاری…</div></div>
-        </div>
-      </div>
 
-      <!-- قفل سیستم -->
-      <div id="view-lockdown" class="view">
+          <div class="noc-section-head">
+            <div>
+              <h3>تاریخچه هشدارها</h3>
+              <p class="noc-section-sub">
+                سوابق اعلان‌های ثبت‌شده در سیستم
+              </p>
+            </div>
+
+            <span class="noc-soft-tag">
+              History
+            </span>
+          </div>
+
+          <div id="alarm-history" class="list">
+            <div class="empty">
+              در حال دریافت تاریخچه...
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ============== LOCKDOWN ============== -->
+      <section
+        id="view-lockdown"
+        class="view"
+        aria-label="وضعیت قفل سراسری"
+      >
+
         <div class="card glass lock-card">
-          <div id="lock-icon" class="lock-icon">🔓</div>
-          <h3>قفل سراسری سیستم</h3>
-          <p id="lock-state" class="lock-state">—</p>
-          <button id="lock-btn" class="btn big">تغییر وضعیت</button>
+
+          <div id="lock-icon" class="lock-icon">
+            🔓
+          </div>
+
+          <div class="noc-eyebrow">
+            SECURITY CONTROL
+          </div>
+
+          <h3>کنترل قفل سراسری سیستم</h3>
+
+          <p id="lock-state" class="lock-state">
+            در حال بررسی وضعیت...
+          </p>
+
+          <p class="noc-lock-note">
+            وضعیت قفل دستگاه‌های متصل به شبکه را
+            از این بخش مشاهده و مدیریت کنید.
+          </p>
+
+          <button
+            type="button"
+            id="lock-btn"
+            class="btn big"
+          >
+            دریافت وضعیت...
+          </button>
+
+          <p class="noc-lock-warning">
+            ⚠️ تغییر وضعیت قفل ممکن است روی
+            چندین دستگاه تأثیر بگذارد.
+          </p>
+
         </div>
-      </div>
+
+      </section>
+
+      <!-- FOOTER -->
+      <footer class="noc-footer">
+        <span>
+          Luminiz Enterprise Network Operations Center
+        </span>
+        <span>2026 • LUMINIZ NOC</span>
+      </footer>
+
     </main>
+
   </div>
 
-  <!-- ==================== مودال دستور / پیام ==================== -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+  <!-- ============== MODAL ============== -->
+  <div
+    id="modal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+  >
+
     <div class="modal-content glass">
-      <h3 id="modal-title">اجرای دستور</h3>
-      <p id="modal-target" class="muted"></p>
-      <textarea id="modal-input" rows="5" class="code" spellcheck="false"></textarea>
-      <div class="modal-actions">
-        <button class="btn primary" id="modal-run">🚀 اجرا</button>
-        <button class="btn ghost" id="modal-close">بستن</button>
+
+      <div class="noc-modal-eyebrow">
+        LUMINIZ DEVICE MANAGEMENT
       </div>
-      <pre id="modal-output" class="output"></pre>
+
+      <h3 id="modal-title">
+        مدیریت دستگاه
+      </h3>
+
+      <p id="modal-target" class="noc-modal-subtitle">
+      </p>
+
+      <div class="noc-divider"></div>
+
+      <label
+        for="modal-input"
+        class="muted"
+      >
+        ورودی عملیات
+      </label>
+
+      <textarea
+        id="modal-input"
+        rows="5"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="مقدار موردنظر را وارد کنید..."
+      ></textarea>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn primary"
+          id="modal-run"
+        >
+          انجام عملیات
+        </button>
+
+        <button
+          type="button"
+          class="btn ghost"
+          id="modal-close"
+        >
+          بستن
+        </button>
+
+      </div>
+
+      <pre
+        id="modal-output"
+        class="output"
+        aria-live="polite"
+      ></pre>
+
     </div>
+
   </div>
 
-  <!-- اعلان کوتاه (Toast) -->
-  <div id="toast" class="toast hidden"></div>
+  <!-- ============== NOTIFICATIONS ============== -->
+  <div
+    id="toast"
+    class="toast hidden"
+    role="status"
+    aria-live="polite"
+  ></div>
 
-  <script src="/static/panel.js"></script>
+  <!-- APPLICATION SCRIPT -->
+  <script src="/static/panel.js" defer></script>
+
 </body>
 </html>
