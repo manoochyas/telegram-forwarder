@@ -28,6 +28,7 @@ DB_PATH = "/tmp/printers.db"
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 active_clients = {}
+CLIENT_TIMEOUT = 120  # 120 seconds
 _auth_log_cache = {}
 
 # ================= DB =================
@@ -150,12 +151,21 @@ def heartbeat():
     active_clients[ip] = data
     return jsonify({"status": "ok"})
 
+
 @app.route('/get_clients')
 def get_clients():
     now = time.time()
-    for ip in [ip for ip, c in active_clients.items() if now - c['timestamp'] > 8]:
-        del active_clients[ip]
+
+    expired = [
+        ip for ip, client in list(active_clients.items())
+        if now - client.get("timestamp", 0) > CLIENT_TIMEOUT
+    ]
+
+    for ip in expired:
+        active_clients.pop(ip, None)
+
     return jsonify(list(active_clients.values()))
+
 
 @app.route('/send_alarm', methods=['POST'])
 def send_alarm():
