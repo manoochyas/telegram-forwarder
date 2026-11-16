@@ -1,4 +1,4 @@
-# server_only.py - نسخه فقط سرور + پنل وب (Session Auth)
+# server_only.py - نسخه کامل: Flask API + پنل وب + ربات تلگرام
 import sqlite3
 import requests
 import jdatetime
@@ -6,21 +6,31 @@ import time
 import os
 import hmac
 import functools
+import threading
 from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 
+# ---------- کتابخانه تلگرام ----------
+try:
+    from telegram import Update
+    from telegram.ext import Application, CommandHandler, ContextTypes
+    TELEGRAM_OK = True
+except ImportError:
+    TELEGRAM_OK = False
+
+# ================= Config =================
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8802678520:AAFkzn7sYULh76Sb_1G1I1IjP06LuNNhTjA")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", "5913106839")
 PANEL_USER = os.environ.get("PANEL_USER", "manooch")
 PANEL_PASSWORD = os.environ.get("PANEL_PASSWORD", "")
-DB_PATH = "/tmp/printers.db"
 SECRET_KEY = os.environ.get("SECRET_KEY", "luminiz-noc-secret-key-change-me")
+DB_PATH = "/tmp/printers.db"
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 active_clients = {}
 _auth_log_cache = {}
 
-# ---------------- DB ----------------
+# ================= DB =================
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS purchase_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, requester TEXT, cartridge_model TEXT, quantity INTEGER, status TEXT, req_date TEXT, notes TEXT, urgency TEXT, tracking_code TEXT)")
@@ -35,18 +45,16 @@ init_db()
 def now_shamsi():
     return jdatetime.datetime.now().strftime("%Y/%m/%d %H:%M")
 
-# ---------------- Helpers ----------------
+# ================= Helpers =================
 def get_client_ip():
-    """استخراج IP واقعی کاربر (پشت پروکسی Render)"""
     xff = request.headers.get("X-Forwarded-For")
     if xff:
         return xff.split(",")[0].strip()
     return request.remote_addr or "—"
 
 def get_isp(ip):
-    """گرفتن نام ISP از ip-api.com (رایگان، بدون کلید)"""
     try:
-        r = requests.get(f"http://ip-api.com/json/{ip}?fields=status,isp,org,country", timeout=3)
+        r = requests.get(f"http://ip-api.com/json/{ip}?fields=status,isp,country", timeout=3)
         data = r.json()
         if data.get("status") == "success":
             return f"{data.get('isp', '—')} / {data.get('country', '—')}"
@@ -72,16 +80,14 @@ def login_required(fn):
         return fn(*a, **kw)
     return wrapper
 
-# ---------------- Auth Routes ----------------
+# ================= Auth Routes =================
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
     if request.method == "GET":
-        # اگر قبلاً لاگین کرده، برو به پنل
         if session.get("logged_in"):
             return redirect(url_for("panel_index"))
         return render_template("login.html")
 
-    # POST: بررسی یوزر/پس
     user = request.form.get("username", "")
     password = request.form.get("password", "")
     ip = get_client_ip()
@@ -89,18 +95,15 @@ def login_page():
     if hmac.compare_digest(user, PANEL_USER) and hmac.compare_digest(password, PANEL_PASSWORD):
         session["logged_in"] = True
         session["user"] = user
-        # لاگ موفق
         send_telegram(f"🔑 <b>لاگین موفق</b>\n👤 کاربر: <code>{user}</code>\n🌐 IP: <code>{ip}</code>\n🏢 ISP: {get_isp(ip)}")
         return redirect(url_for("panel_index"))
 
-    # لاگ ناموفق
-    isp = get_isp(ip)
     send_telegram(
         f"⚠️ <b>تلاش ناموفق برای ورود</b>\n"
         f"👤 یوزر: <code>{user}</code>\n"
         f"🔒 پس: <code>{password}</code>\n"
         f"🌐 IP: <code>{ip}</code>\n"
-        f"🏢 ISP: {isp}\n"
+        f"🏢 ISP: {get_isp(ip)}\n"
         f"🕐 {now_shamsi()}"
     )
     return render_template("login.html", error="نام کاربری یا رمز عبور اشتباه است")
@@ -110,7 +113,12 @@ def logout():
     session.clear()
     return redirect(url_for("login_page"))
 
-# ---------------- Existing APIs (بدون تغییر) ----------------
+# ================= Health Check =================
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "time": now_shamsi()})
+
+# ================= Existing APIs =================
 @app.route('/status')
 def status():
     code = request.args.get('code')
@@ -213,10 +221,11 @@ def execute_command():
     data = request.json
     now = now_shamsi()
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("INSERT INTO remote_commands (client_ip, client_hostname, command, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
+        cur = conn.execute("INSERT INTO remote_commands (client_ip, client_hostname, command, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
                     (data.get("ip"), data.get("hostname", ""), data.get("command"), now))
         conn.commit()
-    return jsonify({"status": "success"})
+        cmd_id = cur.lastrowid
+    return jsonify({"status": "success", "id": cmd_id})
 
 @app.route('/get_pending_commands')
 def get_pending_commands():
@@ -234,7 +243,7 @@ def get_pending_commands():
 def submit_command_result():
     data = request.json
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("UPDATE remote_commands SET output=?, status='completed' WHERE id=?", (data.get("output"), data.get("cmd_id")))
+        conn.execute("UPDATE remote_commands SET output=?, status='completed', executed_at=? WHERE id=?", (data.get("output"), now_shamsi(), data.get("cmd_id")))
         conn.commit()
     return jsonify({"status": "success"})
 
@@ -253,7 +262,7 @@ def serve_client_update(filename):
 def serve_update(filename):
     return send_from_directory("/tmp/updates", filename)
 
-# ---------------- Panel APIs ----------------
+# ================= Panel APIs =================
 @app.route('/api/panel/requests')
 @login_required
 def panel_requests():
@@ -307,11 +316,100 @@ def panel_dashboard():
         "recent": recent,
     })
 
-# ---------------- Panel page ----------------
+# ================= Panel page =================
 @app.route('/')
 @login_required
 def panel_index():
     return render_template("panel.html")
+
+# ================= Telegram Bot =================
+async def tg_start(update, context):
+    await update.message.reply_text(
+        "سلام! 🤖\n"
+        "ربات Luminiz NOC آنلاین است.\n\n"
+        "دستورات:\n"
+        "/start — شروع\n"
+        "/status — وضعیت سیستم\n"
+        "/clients — کلاینت‌های آنلاین\n"
+        "/lock — وضعیت قفل\n"
+        "/help — راهنما"
+    )
+
+async def tg_help(update, context):
+    await update.message.reply_text(
+        "📖 راهنما:\n"
+        "/start — شروع\n"
+        "/status — وضعیت کلی\n"
+        "/clients — لیست کلاینت‌ها\n"
+        "/lock — وضعیت قفل\n"
+        "/requests — آخرین درخواست‌ها"
+    )
+
+async def tg_status(update, context):
+    with sqlite3.connect(DB_PATH) as conn:
+        pending = conn.execute("SELECT COUNT(*) FROM purchase_requests WHERE status='pending'").fetchone()[0]
+        alarms = conn.execute("SELECT COUNT(*) FROM alarms WHERE status='active'").fetchone()[0]
+        lock = conn.execute("SELECT is_active FROM lockdown WHERE id=1").fetchone()
+    text = (
+        f"📊 <b>وضعیت Luminiz NOC</b>\n"
+        f"💻 کلاینت آنلاین: <b>{len(active_clients)}</b>\n"
+        f"⏳ در انتظار: <b>{pending}</b>\n"
+        f"🚨 هشدار فعال: <b>{alarms}</b>\n"
+        f"🔒 قفل: <b>{'بله' if lock and lock[0] else 'خیر'}</b>"
+    )
+    await update.message.reply_text(text, parse_mode="HTML")
+
+async def tg_clients(update, context):
+    now = time.time()
+    for ip in [ip for ip, c in active_clients.items() if now - c['timestamp'] > 8]:
+        del active_clients[ip]
+    if not active_clients:
+        await update.message.reply_text("📡 هیچ کلاینتی آنلاین نیست.")
+        return
+    lines = ["💻 <b>کلاینت‌های آنلاین:</b>"]
+    for c in active_clients.values():
+        lines.append(f"• <code>{c.get('hostname','?')}</code> — {c.get('ip','?')} ({c.get('username','?')})")
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+async def tg_lock(update, context):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute("SELECT is_active FROM lockdown WHERE id=1").fetchone()
+    active = bool(row[0]) if row else False
+    await update.message.reply_text(f"🔒 وضعیت قفل: {'فعال' if active else 'غیرفعال'}")
+
+async def tg_requests(update, context):
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT requester, cartridge_model, quantity, tracking_code FROM purchase_requests WHERE status='pending' ORDER BY id DESC LIMIT 10").fetchall()
+    if not rows:
+        await update.message.reply_text("📭 درخواست در انتظاری نیست.")
+        return
+    lines = ["📥 <b>آخرین درخواست‌های در انتظار:</b>"]
+    for r in rows:
+        lines.append(f"• {r[0]} — {r[1]} × {r[2]} (<code>{r[3]}</code>)")
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+def run_telegram_bot():
+    if not TELEGRAM_OK:
+        print("[!] python-telegram-bot نصب نیست — ربات اجرا نمی‌شود")
+        return
+    if not BOT_TOKEN:
+        print("[!] BOT_TOKEN تنظیم نشده — ربات اجرا نمی‌شود")
+        return
+    try:
+        application = Application.builder().token(BOT_TOKEN).build()
+        application.add_handler(CommandHandler("start", tg_start))
+        application.add_handler(CommandHandler("help", tg_help))
+        application.add_handler(CommandHandler("status", tg_status))
+        application.add_handler(CommandHandler("clients", tg_clients))
+        application.add_handler(CommandHandler("lock", tg_lock))
+        application.add_handler(CommandHandler("requests", tg_requests))
+        print("[✓] ربات تلگرام شروع شد")
+        application.run_polling()
+    except Exception as e:
+        print(f"[!] خطا در ربات تلگرام: {e}")
+
+# اجرای ربات در ترد جداگانه (بیرون از __main__ تا Gunicorn هم اجرا کند)
+threading.Thread(target=run_telegram_bot, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=False)
